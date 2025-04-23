@@ -23,8 +23,7 @@ class handDetector():
         if self.results.multi_hand_landmarks:
             for handLms in self.results.multi_hand_landmarks:
                 if draw:
-                    self.mpDraw.draw_landmarks(img, handLms,
-                                               self.mpHands.HAND_CONNECTIONS)
+                    self.mpDraw.draw_landmarks(img, handLms,self.mpHands.HAND_CONNECTIONS)
         return img
 
     def findPosition(self, img, handNo=0, draw=True):
@@ -42,7 +41,6 @@ class handDetector():
     def normalize_hand_keypoints(self, landmarks):
         keypoints = []
         landmark_list = list(landmarks)
-
 
         if len(landmark_list) < 21:
             LandmarkType = type(landmark_list[0])
@@ -65,9 +63,11 @@ class handDetector():
         if self.results.multi_hand_landmarks:
             hand_landmarks_list = list(self.results.multi_hand_landmarks)
 
-            for handLms in hand_landmarks_list:
-                landmark_list = list(handLms.landmark)
+            num_hands_to_process = min(len(hand_landmarks_list), 2)
 
+            for handNo in range(num_hands_to_process):
+                handLms = hand_landmarks_list[handNo]
+                landmark_list = list(handLms.landmark)
 
                 if len(landmark_list) < 21:
                     LandmarkType = type(landmark_list[0])
@@ -77,10 +77,8 @@ class handDetector():
                 hand_kp = self.normalize_hand_keypoints(landmark_list)
                 all_hand_keypoints.extend(hand_kp)
 
-
             if len(hand_landmarks_list) == 1:
                 all_hand_keypoints.extend([0.0] * 63)
-
 
             if len(hand_landmarks_list) > 2:
                 all_hand_keypoints = all_hand_keypoints[:126]

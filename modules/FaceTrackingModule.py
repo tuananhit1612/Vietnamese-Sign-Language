@@ -22,8 +22,7 @@ class faceDetector():
         if self.results.multi_face_landmarks:
             for faceLms in self.results.multi_face_landmarks:
                 if draw:
-                    self.mpDraw.draw_landmarks(img, faceLms,
-                                               self.mpFace.FACEMESH_CONTOURS)
+                    self.mpDraw.draw_landmarks(img, faceLms,self.mpFace.FACEMESH_CONTOURS)
         return img
 
     def findPosition(self, img, faceNo=0, draw=True):
@@ -43,11 +42,6 @@ class faceDetector():
 
         landmark_list = list(landmarks)
 
-        if len(landmark_list) < 468:
-            LandmarkType = type(landmark_list[0])
-            for _ in range(468 - len(landmark_list)):
-                landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
-
         base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
 
         for lm in landmark_list[:468]:
@@ -64,21 +58,19 @@ class faceDetector():
         if self.results.multi_face_landmarks:
             face_landmarks_list = list(self.results.multi_face_landmarks)
 
-            for faceLms in face_landmarks_list:
-                landmark_list = list(faceLms.landmark)
+            first_face_landmarks = face_landmarks_list[0]
+            landmark_list = list(first_face_landmarks.landmark)
 
-                if len(landmark_list) < 468:
-                    LandmarkType = type(landmark_list[0])
-                    for _ in range(468 - len(landmark_list)):
-                        landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
+            if len(landmark_list) < 468:
+                LandmarkType = type(landmark_list[0])
+                for _ in range(468 - len(landmark_list)):
+                    landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
 
-                face_kp = self.normalize_face_keypoints(landmark_list)
-                all_face_keypoints.extend(face_kp)
-
-            if len(face_landmarks_list) == 1:
-                all_face_keypoints.extend([0.0] * (468 * 3))
+            face_kp = self.normalize_face_keypoints(landmark_list)
+            all_face_keypoints.extend(face_kp)
 
         else:
             return None
 
         return all_face_keypoints
+

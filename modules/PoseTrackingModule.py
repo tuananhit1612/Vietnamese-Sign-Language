@@ -45,7 +45,6 @@ class poseDetector():
             for _ in range(33 - len(landmark_list)):
                 landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
 
-        # Tính toán sự thay đổi của các điểm landmark so với điểm gốc
         base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
 
         for lm in landmark_list[:33]:
