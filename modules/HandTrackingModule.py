@@ -84,6 +84,6 @@ class handDetector():
                 all_hand_keypoints = all_hand_keypoints[:126]
 
         else:
-            return None
+            all_hand_keypoints.extend([0.0] * 21 * 3)
 
         return all_hand_keypoints

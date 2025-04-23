@@ -70,7 +70,7 @@ class faceDetector():
             all_face_keypoints.extend(face_kp)
 
         else:
-            return None
+            all_face_keypoints.extend([0.0] * 468 * 3)
 
         return all_face_keypoints
 

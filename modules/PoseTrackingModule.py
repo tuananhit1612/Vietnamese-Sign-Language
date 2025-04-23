@@ -70,6 +70,6 @@ class poseDetector():
             all_pose_keypoints.extend(pose_kp)
 
         else:
-            return None
+            all_pose_keypoints.extend([0.0] * 33 * 3)
 
         return all_pose_keypoints

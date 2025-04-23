@@ -5,8 +5,8 @@ import modules.HandTrackingModule as htm
 import modules.FaceTrackingModule as ftm
 import modules.PoseTrackingModule as ptm
 
-INPUT_VIDEO_DIR = 'D:/Dev/DoAnCoSo_NCKH/Vietnamese-Sign-Language/data/videos/'
-OUTPUT_NPY_DIR = 'D:/Dev/DoAnCoSo_NCKH/Vietnamese-Sign-Language/data/npy'
+INPUT_VIDEO_DIR = 'D:/output'
+OUTPUT_NPY_DIR = 'D:/npy'
 os.makedirs(OUTPUT_NPY_DIR, exist_ok=True)
 
 def process_video(video_path, output_dir):
@@ -35,7 +35,7 @@ def process_video(video_path, output_dir):
         face_keypoints = face_detector.extractAllPosition(face_frame)
         pose_keypoints = pose_detector.extractAllPosition(pose_frame)
 
-        if hand_keypoints is not None and pose_keypoints is not None:
+        if hand_keypoints is not None:
             combined_keypoints = hand_keypoints + face_keypoints + pose_keypoints
             sequence.append(combined_keypoints)
             frame_count += 1
