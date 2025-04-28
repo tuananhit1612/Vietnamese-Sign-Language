@@ -39,19 +39,15 @@ class poseDetector():
         keypoints = []
         landmark_list = list(landmarks)
 
-        # Padding nếu số lượng landmark ít hơn 33
         if len(landmark_list) < 33:
             LandmarkType = type(landmark_list[0])
             for _ in range(33 - len(landmark_list)):
                 landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
 
-        base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
+        #base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
 
         for lm in landmark_list[:33]:
-            dx = lm.x - base_x
-            dy = lm.y - base_y
-            dz = lm.z - base_z
-            keypoints.extend([dx, dy, dz])
+            keypoints.extend([lm.x, lm.y, lm.z])
 
         return keypoints
 
@@ -60,12 +56,6 @@ class poseDetector():
 
         if self.results.pose_landmarks:
             landmark_list = list(self.results.pose_landmarks.landmark)
-
-            if len(landmark_list) < 33:
-                LandmarkType = type(landmark_list[0])
-                for _ in range(33 - len(landmark_list)):
-                    landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
-
             pose_kp = self.normalize_pose_keypoints(landmark_list)
             all_pose_keypoints.extend(pose_kp)
 

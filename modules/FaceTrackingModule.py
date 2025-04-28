@@ -42,13 +42,14 @@ class faceDetector():
 
         landmark_list = list(landmarks)
 
-        base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
+        if len(landmark_list) < 468:
+            LandmarkType = type(landmark_list[0])
+            for _ in range(468 - len(landmark_list)):
+                landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
+        #base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
 
         for lm in landmark_list[:468]:
-            dx = lm.x - base_x
-            dy = lm.y - base_y
-            dz = lm.z - base_z
-            keypoints.extend([dx, dy, dz])
+            keypoints.extend([lm.x, lm.y, lm.z])
 
         return keypoints
 
@@ -60,12 +61,6 @@ class faceDetector():
 
             first_face_landmarks = face_landmarks_list[0]
             landmark_list = list(first_face_landmarks.landmark)
-
-            if len(landmark_list) < 468:
-                LandmarkType = type(landmark_list[0])
-                for _ in range(468 - len(landmark_list)):
-                    landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
-
             face_kp = self.normalize_face_keypoints(landmark_list)
             all_face_keypoints.extend(face_kp)
 

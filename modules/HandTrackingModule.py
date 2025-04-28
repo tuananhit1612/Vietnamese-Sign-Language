@@ -47,13 +47,10 @@ class handDetector():
             for _ in range(21 - len(landmark_list)):
                 landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
 
-        base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
+        #base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
 
         for lm in landmark_list[:21]:
-            dx = lm.x - base_x
-            dy = lm.y - base_y
-            dz = lm.z - base_z
-            keypoints.extend([dx, dy, dz])
+            keypoints.extend([lm.x, lm.y, lm.z])
 
         return keypoints
 
@@ -68,12 +65,6 @@ class handDetector():
             for handNo in range(num_hands_to_process):
                 handLms = hand_landmarks_list[handNo]
                 landmark_list = list(handLms.landmark)
-
-                if len(landmark_list) < 21:
-                    LandmarkType = type(landmark_list[0])
-                    for _ in range(21 - len(landmark_list)):
-                        landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
-
                 hand_kp = self.normalize_hand_keypoints(landmark_list)
                 all_hand_keypoints.extend(hand_kp)
 
@@ -84,6 +75,6 @@ class handDetector():
                 all_hand_keypoints = all_hand_keypoints[:126]
 
         else:
-            all_hand_keypoints.extend([0.0] * 21 * 3)
+            return None
 
         return all_hand_keypoints

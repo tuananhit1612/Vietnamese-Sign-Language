@@ -5,7 +5,7 @@ import modules.HandTrackingModule as htm
 import modules.FaceTrackingModule as ftm
 import modules.PoseTrackingModule as ptm
 
-INPUT_VIDEO_DIR = 'D:/output'
+INPUT_VIDEO_DIR = 'D:/tmp'
 OUTPUT_NPY_DIR = 'D:/npy'
 os.makedirs(OUTPUT_NPY_DIR, exist_ok=True)
 
@@ -13,7 +13,7 @@ def process_video(video_path, output_dir):
     cap = cv2.VideoCapture(video_path)
 
     hand_detector = htm.handDetector()
-    face_detector = ftm.faceDetector()
+    #face_detector = ftm.faceDetector()
     pose_detector = ptm.poseDetector()
 
     sequence = []
@@ -28,15 +28,15 @@ def process_video(video_path, output_dir):
             break
 
         hand_frame = hand_detector.findHands(frame)
-        face_frame = face_detector.findFace(frame)
+        #face_frame = face_detector.findFace(frame)
         pose_frame = pose_detector.findPose(frame)
 
         hand_keypoints = hand_detector.extractAllPosition(hand_frame)
-        face_keypoints = face_detector.extractAllPosition(face_frame)
+        #face_keypoints = face_detector.extractAllPosition(face_frame)
         pose_keypoints = pose_detector.extractAllPosition(pose_frame)
 
         if hand_keypoints is not None:
-            combined_keypoints = hand_keypoints + face_keypoints + pose_keypoints
+            combined_keypoints = hand_keypoints + pose_keypoints
             sequence.append(combined_keypoints)
             frame_count += 1
 
@@ -58,6 +58,7 @@ def process_video(video_path, output_dir):
 
     cap.release()
     cv2.destroyAllWindows()
+    #os.remove(video_path)
 
 def preprocess_dataset():
     video_files = [f for f in os.listdir(INPUT_VIDEO_DIR) if f.endswith(('.mp4', '.avi', '.mov'))]
@@ -70,6 +71,9 @@ def preprocess_dataset():
         print(f"Processing video {i + 1}/{len(video_files)}")
         video_path = os.path.join(INPUT_VIDEO_DIR, video_file)
         process_video(video_path, OUTPUT_NPY_DIR)
+
+        if i == 5:
+            break
 
     print("Dataset processing complete!")
 
