@@ -5,8 +5,13 @@ import pandas as pd
 
 
 def mapping_id_num(df, id_text):
-    return df[df['id_text'] == id_text]['id_num'].values[0]
-
+    # Check if id_text exists in the dataframe
+    match = df[df['id_video'] == id_text]
+    if not match.empty:
+        return match['id_sequence'].values[0]
+    else:
+        print(f"Warning: id_video '{id_text}' not found in the dataframe.")
+        return None
 def load_npy_data(input_dir, df):
     X = []
     y = []
@@ -31,14 +36,14 @@ def save_dataset_to_pickle(X, y, output_file):
 
 
 def main():
-    excel_file_path = 'D:/Dev/DoAnCoSo_NCKH/Vietnamese-Sign-Language/data/video_to_text_mapping_updated.xlsx'
+    excel_file_path = 'D:/tmp/test/video_to_text_mapping_basic.xlsx'
     df = pd.read_excel(excel_file_path)
 
-    input_dir = 'D:/npy'
+    input_dir = 'D:/tmp/test/train_landmark_files'
 
     X, y = load_npy_data(input_dir, df)
 
-    output_file = 'D:/Dev/DoAnCoSo_NCKH/Vietnamese-Sign-Language/data/data.p'
+    output_file = 'D:/tmp/test/data.p'
     save_dataset_to_pickle(X, y, output_file)
 
 if __name__ == '__main__':

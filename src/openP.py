@@ -5,7 +5,7 @@ def load_pickle_file(file_path):
         data = pickle.load(file)
     return data
 
-file_path = 'D:/Dev/DoAnCoSo_NCKH/Vietnamese-Sign-Language/data/data.p'
+file_path = 'D:/tmp/test/data.p'
 data = load_pickle_file(file_path)
 print(data)
 x = data[0]

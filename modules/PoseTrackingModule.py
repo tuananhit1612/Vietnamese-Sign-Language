@@ -35,7 +35,7 @@ class poseDetector():
                     cv2.circle(img, (cx, cy), 5, (255, 0, 255), cv2.FILLED)
         return lmList
 
-    def normalize_pose_keypoints(self, landmarks):
+    def normalize_pose_keypoints(self, img, landmarks):
         keypoints = []
         landmark_list = list(landmarks)
 
@@ -46,9 +46,8 @@ class poseDetector():
 
         #base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
 
-        for lm in landmark_list[:33]:
+        for lm in landmarks:
             keypoints.extend([lm.x, lm.y, lm.z])
-
         return keypoints
 
     def extractAllPosition(self, img, draw=True):
@@ -56,7 +55,7 @@ class poseDetector():
 
         if self.results.pose_landmarks:
             landmark_list = list(self.results.pose_landmarks.landmark)
-            pose_kp = self.normalize_pose_keypoints(landmark_list)
+            pose_kp = self.normalize_pose_keypoints(img,landmark_list)
             all_pose_keypoints.extend(pose_kp)
 
         else:

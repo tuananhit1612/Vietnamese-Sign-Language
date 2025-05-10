@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import time
+import numpy as np
 
 class handDetector():
     def __init__(self, mode=False, maxHands=2, detectionCon=0.5, trackCon=0.5):
@@ -23,38 +24,19 @@ class handDetector():
         if self.results.multi_hand_landmarks:
             for handLms in self.results.multi_hand_landmarks:
                 if draw:
-                    self.mpDraw.draw_landmarks(img, handLms,self.mpHands.HAND_CONNECTIONS)
+                    self.mpDraw.draw_landmarks(img, handLms, self.mpHands.HAND_CONNECTIONS)
         return img
-
-    def findPosition(self, img, handNo=0, draw=True):
-        lmList = []
-        if self.results.multi_hand_landmarks:
-            myHand = self.results.multi_hand_landmarks[handNo]
-            for id, lm in enumerate(myHand.landmark):
-                h, w, c = img.shape
-                cx, cy = int(lm.x * w), int(lm.y * h)
-                lmList.append([id, cx, cy])
-                if draw:
-                    cv2.circle(img, (cx, cy), 15, (255, 0, 255), cv2.FILLED)
-        return lmList
 
     def normalize_hand_keypoints(self, landmarks):
         keypoints = []
-        landmark_list = list(landmarks)
-
-        if len(landmark_list) < 21:
-            LandmarkType = type(landmark_list[0])
-            for _ in range(21 - len(landmark_list)):
-                landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
-
-        #base_x, base_y, base_z = landmark_list[0].x, landmark_list[0].y, landmark_list[0].z
-
-        for lm in landmark_list[:21]:
-            keypoints.extend([lm.x, lm.y, lm.z])
-
+        baseX, baseY = landmarks[0].x,landmarks[0].y
+        for lm in landmarks:
+            x = lm.x - baseX
+            y = lm.y = baseY
+            keypoints.extend([lm.x,lm.y,lm.z,x,y])
         return keypoints
 
-    def extractAllPosition(self, img, draw=True):
+    def extract_landmarks(self, draw=True):
         all_hand_keypoints = []
 
         if self.results.multi_hand_landmarks:
@@ -65,16 +47,19 @@ class handDetector():
             for handNo in range(num_hands_to_process):
                 handLms = hand_landmarks_list[handNo]
                 landmark_list = list(handLms.landmark)
+
+                if len(landmark_list) < 21:
+                    LandmarkType = type(landmark_list[0])
+                    for _ in range(21 - len(landmark_list)):
+                        landmark_list.append(LandmarkType(x=0.0, y=0.0, z=0.0))
+
                 hand_kp = self.normalize_hand_keypoints(landmark_list)
                 all_hand_keypoints.extend(hand_kp)
-
             if len(hand_landmarks_list) == 1:
-                all_hand_keypoints.extend([0.0] * 63)
+                all_hand_keypoints.extend([0.0] * 105)
 
             if len(hand_landmarks_list) > 2:
-                all_hand_keypoints = all_hand_keypoints[:126]
-
+                all_hand_keypoints = all_hand_keypoints[:210]
         else:
             return None
-
         return all_hand_keypoints
