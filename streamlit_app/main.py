@@ -3,19 +3,23 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import time
 import streamlit as st
+from sklearn.preprocessing import LabelEncoder
 import cv2
 import modules.HandTrackingModule as htm
 from tensorflow.keras.models import load_model
 import numpy as np
 import pandas as pd
 from collections import Counter
-
+import pickle
 
 model = load_model('D:/Dev/DoAnCoSo_NCKH/Vietnamese-Sign-Language/data/models/sign_language_model.h5')
 excel_file_path = 'D:/tmp/test/video_to_text_data_basic.xlsx'
+label_encoder_path = "D:\Dev\DoAnCoSo_NCKH\Vietnamese-Sign-Language\data\models\label_encoder.pkl"
 df = pd.read_excel(excel_file_path)
+with open(label_encoder_path, "rb") as f:
+    le = pickle.load(f)
 
-cap = cv2.VideoCapture("D:/tmp/D0490B_rotate.mp4")
+cap = cv2.VideoCapture(0)
 hand = htm.handDetector()
 
 st.set_page_config(layout="wide")
@@ -24,7 +28,7 @@ sentence = []
 sequence = []
 predictions = []
 threshold = 0.5
-window_frame = 40
+window_frame = 50
 
 st.markdown("""
         <style>
@@ -51,7 +55,6 @@ with col3:
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
-        print("Can't receive frame")
         break
 
     hand_frame = hand.findHands(frame)
@@ -63,17 +66,17 @@ while cap.isOpened():
 
         if len(sequence) == window_frame:
             print(len(sentence))
-            sequence_data = np.array(sequence).reshape(1, window_frame, 210)
+            sequence_data = np.array(sequence).reshape(1, window_frame, 126)
             res = model.predict(sequence_data)
             predicted_class = np.argmax(res)
             confidence = res[0][predicted_class]
-            predicted_label = df.loc[predicted_class, 'text']
+            predicted_label = le.inverse_transform([predicted_class])[0]
 
             predictions.append(predicted_label)
             print(predicted_label)
 
             if np.unique(predictions[-10:])[0] == predicted_label:
-                #if confidence > threshold:
+                if confidence > threshold:
                     if len(sentence) > 0:
                         if predicted_label != sentence[-1]:
                             sentence.append(predicted_label)

@@ -29,11 +29,8 @@ class handDetector():
 
     def normalize_hand_keypoints(self, landmarks):
         keypoints = []
-        baseX, baseY = landmarks[0].x,landmarks[0].y
         for lm in landmarks:
-            x = lm.x - baseX
-            y = lm.y = baseY
-            keypoints.extend([lm.x,lm.y,lm.z,x,y])
+            keypoints.extend([lm.x,lm.y,lm.z])
         return keypoints
 
     def extract_landmarks(self, draw=True):
@@ -56,10 +53,10 @@ class handDetector():
                 hand_kp = self.normalize_hand_keypoints(landmark_list)
                 all_hand_keypoints.extend(hand_kp)
             if len(hand_landmarks_list) == 1:
-                all_hand_keypoints.extend([0.0] * 105)
+                all_hand_keypoints.extend([0.0] * 63)
 
             if len(hand_landmarks_list) > 2:
-                all_hand_keypoints = all_hand_keypoints[:210]
+                all_hand_keypoints = all_hand_keypoints[:126]
         else:
             return None
         return all_hand_keypoints

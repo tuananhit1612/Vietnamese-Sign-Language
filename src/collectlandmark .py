@@ -1,78 +1,80 @@
+import os
+import time
+
 import cv2
-import mediapipe as mp
+import numpy as np
 import pandas as pd
+import mediapipe as mp
 
 mp_holistic = mp.solutions.holistic
-holistic = mp_holistic.Holistic(static_image_mode=False,
-                                model_complexity=1,
-                                enable_segmentation=False,
-                                refine_face_landmarks=True,
-                                min_detection_confidence=0.5)
+holistic = mp_holistic.Holistic(
+    static_image_mode=False,
+    model_complexity=1,
+    enable_segmentation=False,
+    refine_face_landmarks=True,
+    min_detection_confidence=0.5
+)
 
 df_csv = pd.read_excel("D:/tmp/test/train.xlsx")
 
-cols = ['sequence_id', 'frame'] + \
-       [f'x_left_{i}' for i in range(21)] + [f'y_left_{i}' for i in range(21)] + [f'z_left_{i}' for i in range(21)] + \
-       [f'x_right_{i}' for i in range(21)] + [f'y_right_{i}' for i in range(21)] + [f'z_right_{i}' for i in range(21)]
-
-def extract_landmarks(video_path, sequence_id):
+def extract_landmarks_and_save(video_path, file_id):
     cap = cv2.VideoCapture(video_path)
-    rows = []
     frame_idx = 0
-    start_collect = False
+    rows = []
+
     if not cap.isOpened():
-        print(f"Error opening video file: {video_path}")
-        return pd.DataFrame()
+        print(f"Không thể mở video: {video_path}")
+        return
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
+
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         res = holistic.process(img_rgb)
+        if not res.left_hand_landmarks and not res.right_hand_landmarks:
+            continue
+        cv2.imshow('video',frame)
+        if cv2.waitKey(1) == 27:
+            break
+        row = {'frame': frame_idx}
 
-        landmarks = []
-        if res.left_hand_landmarks or res.right_hand_landmarks:
-            start_collect = True
+        if res.left_hand_landmarks:
+            for i, lm in enumerate(res.left_hand_landmarks.landmark):
+                row[f'x_left_hand_{i}'] = lm.x
+                row[f'y_left_hand_{i}'] = lm.y
+                row[f'z_left_hand_{i}'] = lm.z
         else:
-            start_collect = False
-        if start_collect:
-            if res.left_hand_landmarks:
-                landmark_list = list(res.left_hand_landmarks.landmark)
-                if len(landmark_list) < 21:
-                    landmark_list.extend([mp.framework.formats.landmark_pb2.Landmark(x=0.0, y=0.0, z=0.0)] * (21 - len(landmark_list)))
-                for lm in landmark_list:
-                    landmarks += [lm.x, lm.y, lm.z]
-            else:
-                landmarks += [0.0] * 63
+            for i in range(21):
+                row[f'x_left_hand_{i}'] = 0.0
+                row[f'y_left_hand_{i}'] = 0.0
+                row[f'z_left_hand_{i}'] = 0.0
 
-            if res.right_hand_landmarks:
-                landmark_list = list(res.right_hand_landmarks.landmark)
+        if res.right_hand_landmarks:
+            for i, lm in enumerate(res.right_hand_landmarks.landmark):
+                row[f'x_right_hand_{i}'] = lm.x
+                row[f'y_right_hand_{i}'] = lm.y
+                row[f'z_right_hand_{i}'] = lm.z
+        else:
+            for i in range(21):
+                row[f'x_right_hand_{i}'] = 0.0
+                row[f'y_right_hand_{i}'] = 0.0
+                row[f'z_right_hand_{i}'] = 0.0
 
-                if len(landmark_list) < 21:
-                    landmark_list.extend([mp.framework.formats.landmark_pb2.Landmark(x=0.0, y=0.0, z=0.0)] * (21 - len(landmark_list)))
-
-                for lm in landmark_list:
-                    landmarks += [lm.x, lm.y, lm.z]
-            else:
-                landmarks += [0.0] * 63
-
-        if landmarks:
-            rows.append([sequence_id, frame_idx] + landmarks)
+        rows.append(row)
         frame_idx += 1
 
     cap.release()
-
-    df = pd.DataFrame(rows, columns=cols)
+    df = pd.DataFrame(rows)
+    print(f"{file_id} - {len(df)} frames saved")
     return df
 
-
-for index, row in df_csv.iterrows():
+for _, row in df_csv.iterrows():
     video_path = f"D:/tmp/test/{row['file_id']}.mp4"
     file_id = row['file_id']
-    sequence_id = row['sequence_id']
 
-    df_landmarks = extract_landmarks(video_path, sequence_id)
-    if not df_landmarks.empty:
-        df_landmarks.to_parquet(f"D:/tmp/test/train_landmark_files/{file_id}.parquet", index=False)
-        print(f"Done {file_id}")
+    df_landmarks = extract_landmarks_and_save(video_path, file_id)
+    if df_landmarks is not None:
+        output_path = f"D:/tmp/test/train_landmark_files/{file_id}.parquet"
+        df_landmarks.to_parquet(output_path, index=False)
