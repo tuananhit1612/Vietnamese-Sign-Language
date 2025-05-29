@@ -1,105 +1,67 @@
+import torch
+import cv2
+import numpy as np
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+import mediapipe as mp
+from SiFormer.SiFormer import SiFormer
 import time
-import streamlit as st
-from sklearn.preprocessing import LabelEncoder
-import cv2
-import modules.HandTrackingModule as htm
-from tensorflow.keras.models import load_model
-import numpy as np
-import pandas as pd
-from collections import Counter
-import pickle
 
-model = load_model('D:/Dev/DoAnCoSo_NCKH/Vietnamese-Sign-Language/data/models/sign_language_model.h5')
-excel_file_path = 'D:/tmp/test/video_to_text_data_basic.xlsx'
-label_encoder_path = "D:\Dev\DoAnCoSo_NCKH\Vietnamese-Sign-Language\data\models\label_encoder.pkl"
-df = pd.read_excel(excel_file_path)
-with open(label_encoder_path, "rb") as f:
-    le = pickle.load(f)
+MODEL_PATH = "D:/Dev/DoAnCoSo_NCKH/Vietnamese-Sign-Language/data/models/best_model.pth"
+NUM_CLASSES = 7
+SEQ_LEN = 40
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-cap = cv2.VideoCapture(0)
-hand = htm.handDetector()
+model = SiFormer(num_classes=NUM_CLASSES, num_hid=126, seq_len=SEQ_LEN, device=DEVICE)
+model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+model.to(DEVICE)
+model.eval()
 
-st.set_page_config(layout="wide")
-st.title("Test real-cam")
-sentence = []
-sequence = []
-predictions = []
-threshold = 0.5
-window_frame = 50
+mp_hands = mp.solutions.holistic
+holistic = mp_hands.Holistic(min_detection_confidence=0.5, model_complexity=1)
 
-st.markdown("""
-        <style>
-            .big-font {
-                color: #e76f51 !important;
-                font-size: 60px !important;
-                border: 0.5rem solid #fcbf49 !important;
-                border-radius: 2rem;
-                text-align: center;
-            }
-        </style>
-""", unsafe_allow_html=True)
+cap = cv2.VideoCapture("D:\Video_Full/D0495.mp4")
+left_hand_seq = []
+right_hand_seq = []
 
-col1, col2, col3 = st.columns([6, 2,2])
+with torch.no_grad():
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-with col1:
-    video_placeholder = st.empty()
+        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        result = holistic.process(img_rgb)
 
-with col2:
-    prediction_placeholder = st.empty()
-with col3:
-    list_prediction_placeholder = st.empty()
+        if result.left_hand_landmarks:
+            left = [[lm.x, lm.y, lm.z] for lm in result.left_hand_landmarks.landmark]
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
+        else:
+            left = [[0.0, 0.0, 0.0]] * 21
 
-    hand_frame = hand.findHands(frame)
-    hand_keypoints = hand.extract_landmarks(hand_frame)
+        if result.right_hand_landmarks:
+            right = [[lm.x, lm.y, lm.z] for lm in result.right_hand_landmarks.landmark]
+        else:
+            right = [[0.0, 0.0, 0.0]] * 21
+        left_hand_seq.append(left)
+        right_hand_seq.append(right)
 
-    if hand_keypoints is not None:
-        sequence.append(hand_keypoints)
-        sequence = sequence[-window_frame:]
+        left_hand_seq = left_hand_seq[-SEQ_LEN:]
+        right_hand_seq = right_hand_seq[-SEQ_LEN:]
 
-        if len(sequence) == window_frame:
-            print(len(sentence))
-            sequence_data = np.array(sequence).reshape(1, window_frame, 126)
-            res = model.predict(sequence_data)
-            predicted_class = np.argmax(res)
-            confidence = res[0][predicted_class]
-            predicted_label = le.inverse_transform([predicted_class])[0]
+        if len(left_hand_seq) == SEQ_LEN:
+            l_tensor = torch.tensor(left_hand_seq, dtype=torch.float32).unsqueeze(0).to(DEVICE)
+            r_tensor = torch.tensor(right_hand_seq, dtype=torch.float32).unsqueeze(0).to(DEVICE)
 
-            predictions.append(predicted_label)
-            print(predicted_label)
+            logits = model(l_tensor, r_tensor)
+            pred = torch.argmax(logits, dim=-1).item()
+            print("Predicted class ID:", pred)
 
-            if np.unique(predictions[-10:])[0] == predicted_label:
-                if confidence > threshold:
-                    if len(sentence) > 0:
-                        if predicted_label != sentence[-1]:
-                            sentence.append(predicted_label)
-                    else:
-                        sentence.append(predicted_label)
-            print(sentence)
-            prediction_placeholder.markdown(
-                f'''<h2 class="big-font">{' '.join(sentence)}</h2>''',
-                unsafe_allow_html=True
-            )
-
-    cTime = time.time()
-    fps = 1 / (cTime - pTime) if 'pTime' in globals() else 0
-    pTime = cTime
-
-    cv2.putText(hand_frame, f"FPS: {int(fps)}", (10, 70), cv2.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 3)
-
-    rgb_frame = cv2.cvtColor(hand_frame, cv2.COLOR_BGR2RGB)
-
-    video_placeholder.image(rgb_frame, use_container_width=True)
-
-    if cv2.waitKey(1) & 0xFF == 27:
-        break
+        cv2.imshow("Frame", frame)
+        if cv2.waitKey(1) & 0xFF == 27:
+            break
 
 cap.release()
 cv2.destroyAllWindows()

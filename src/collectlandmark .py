@@ -1,6 +1,4 @@
 import os
-import time
-
 import cv2
 import numpy as np
 import pandas as pd
@@ -15,16 +13,18 @@ holistic = mp_holistic.Holistic(
     min_detection_confidence=0.5
 )
 
-df_csv = pd.read_excel("D:/tmp/test/train.xlsx")
+df_csv = pd.read_excel("D:/train_test/train.xlsx")
 
 def extract_landmarks_and_save(video_path, file_id):
     cap = cv2.VideoCapture(video_path)
-    frame_idx = 0
-    rows = []
+    left_hand_seq = []
+    right_hand_seq = []
+    left_flags = []
+    right_flags = []
 
     if not cap.isOpened():
         print(f"Không thể mở video: {video_path}")
-        return
+        return None
 
     while True:
         ret, frame = cap.read()
@@ -32,49 +32,63 @@ def extract_landmarks_and_save(video_path, file_id):
             break
 
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        res = holistic.process(img_rgb)
-        if not res.left_hand_landmarks and not res.right_hand_landmarks:
-            continue
-        cv2.imshow('video',frame)
-        if cv2.waitKey(1) == 27:
-            break
-        row = {'frame': frame_idx}
+        result = holistic.process(img_rgb)
 
-        if res.left_hand_landmarks:
-            for i, lm in enumerate(res.left_hand_landmarks.landmark):
-                row[f'x_left_hand_{i}'] = lm.x
-                row[f'y_left_hand_{i}'] = lm.y
-                row[f'z_left_hand_{i}'] = lm.z
+        if result.left_hand_landmarks:
+            left = [[lm.x, lm.y, lm.z] for lm in result.left_hand_landmarks.landmark]
+            left_flags.append(1)
         else:
-            for i in range(21):
-                row[f'x_left_hand_{i}'] = 0.0
-                row[f'y_left_hand_{i}'] = 0.0
-                row[f'z_left_hand_{i}'] = 0.0
+            left = [[0.0, 0.0, 0.0]] * 21
+            left_flags.append(0)
 
-        if res.right_hand_landmarks:
-            for i, lm in enumerate(res.right_hand_landmarks.landmark):
-                row[f'x_right_hand_{i}'] = lm.x
-                row[f'y_right_hand_{i}'] = lm.y
-                row[f'z_right_hand_{i}'] = lm.z
+        if result.right_hand_landmarks:
+            right = [[lm.x, lm.y, lm.z] for lm in result.right_hand_landmarks.landmark]
+            right_flags.append(1)
         else:
-            for i in range(21):
-                row[f'x_right_hand_{i}'] = 0.0
-                row[f'y_right_hand_{i}'] = 0.0
-                row[f'z_right_hand_{i}'] = 0.0
+            right = [[0.0, 0.0, 0.0]] * 21
+            right_flags.append(0)
 
-        rows.append(row)
-        frame_idx += 1
+        left_hand_seq.append(left)
+        right_hand_seq.append(right)
 
     cap.release()
-    df = pd.DataFrame(rows)
-    print(f"{file_id} - {len(df)} frames saved")
+
+    has_hand = [l or r for l, r in zip(left_flags, right_flags)]
+    try:
+        start = has_hand.index(1)
+        end = len(has_hand) - 1 - has_hand[::-1].index(1)
+    except ValueError:
+        return None
+
+    left_hand_seq = left_hand_seq[start:end+1]
+    right_hand_seq = right_hand_seq[start:end+1]
+    left_flags_crop = left_flags[start:end+1]
+    right_flags_crop = right_flags[start:end+1]
+
+    left_flag = int(any(left_flags_crop))
+    right_flag = int(any(right_flags_crop))
+
+    left_array = np.array(left_hand_seq).reshape(len(left_hand_seq), -1)
+    right_array = np.array(right_hand_seq).reshape(len(right_hand_seq), -1)
+    combined = np.concatenate([left_array, right_array], axis=1)
+
+    df = pd.DataFrame(combined)
+    df["left"] = left_flag
+    df["right"] = right_flag
+
     return df
 
+output_dir = "D:/train_test/train_landmark_files"
+os.makedirs(output_dir, exist_ok=True)
+
 for _, row in df_csv.iterrows():
-    video_path = f"D:/tmp/test/{row['file_id']}.mp4"
+    video_path = f"D:/Video_Full/{row['file_id']}.mp4"
     file_id = row['file_id']
 
-    df_landmarks = extract_landmarks_and_save(video_path, file_id)
-    if df_landmarks is not None:
-        output_path = f"D:/tmp/test/train_landmark_files/{file_id}.parquet"
-        df_landmarks.to_parquet(output_path, index=False)
+    df = extract_landmarks_and_save(video_path, file_id)
+    if df is not None:
+        output_path = os.path.join(output_dir, f"{file_id}.parquet")
+        df.to_parquet(output_path, index=False)
+        print(f"Saved: {output_path}")
+    else:
+        print(f"Skip: {file_id}")

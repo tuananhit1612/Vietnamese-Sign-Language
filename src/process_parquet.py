@@ -17,5 +17,5 @@ def export_parquet_to_excel(parquet_path, excel_path=None):
 
 
 if __name__ == "__main__":
-    parquet_file = r"D:\tmp\test\train_landmark_files/TTDAA004_aug_4_14.parquet"
+    parquet_file = r"D:\train_test\train_landmark_files\D0492.parquet"
     export_parquet_to_excel(parquet_file)
