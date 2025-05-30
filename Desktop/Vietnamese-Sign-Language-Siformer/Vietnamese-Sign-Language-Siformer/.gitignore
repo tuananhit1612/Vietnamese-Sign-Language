@@ -1,0 +1,8 @@
+.venv/
+env/
+venv/
+.idea/
+.vscode/
+data/npy/
+data/videos/
+
